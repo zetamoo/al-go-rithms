@@ -1,0 +1,140 @@
+import numpy as np
+import matplotlib.pyplot as plt
+%matplotlib inline
+
+mean_01 = np.array([0.1, 0.2])
+mean_02 = np.array([5.1, 5.2])
+
+cov_01 = np.array([[1.0, 0.2],[0.2, 1.1]])
+cov_02 = np.array([[1.0, 0.3],[0.3, 1.1]])
+
+dist_01 = np.random.multivariate_normal(mean_01, cov_01, 500)
+dist_02 = np.random.multivariate_normal(mean_02, cov_02, 500)
+
+print (dist_01.shape)
+print (dist_02.shape)
+
+plt.scatter(dist_01[:, 0], dist_01[:, 1], c='r')
+plt.scatter(dist_02[:, 0], dist_02[:, 1], c='b')
+
+plt.show()
+
+## Total Dataset
+rows = dist_01.shape[0] + dist_02.shape[0]
+cols = dist_01.shape[1] + 1
+
+data = np.zeros((rows, cols))
+print (data.shape)
+
+data[:dist_01.shape[0], :dist_01.shape[1]] = dist_01
+data[dist_01.shape[0]: rows, :dist_01.shape[1]] = dist_02
+data[dist_01.shape[0]: rows, -1] = 1.0
+
+np.random.shuffle(data)
+
+## Data Splitting
+split = int(0.75*data.shape[0])
+X_train = data[:split, :-1]
+Y_train = data[:split, -1]
+
+X_test = data[split:, :-1]
+Y_test = data[split:, -1]
+
+print (X_train.shape)
+print (X_test.shape)
+print (Y_train.shape)
+print (Y_test.shape)
+
+'''Functions'''
+def sigmoid(z):
+    sig = 1.0/(1 + np.exp(-1*z))
+    return sig
+
+def hypothesis(x_sample, w, b):
+    h = (x_sample*w).sum() + b
+    return sigmoid(h)
+    
+def get_error(x, w, y_true, b):
+    err = 0.0
+    m = x.shape[0]
+    
+    for ix in range(m):
+        if y_true[ix] == 0:
+            add_term = -1*(np.log(1 - hypothesis(x[ix], w, b)))
+            err += add_term
+        else:
+            add_term = -1*(np.log(hypothesis(x[ix], w, b)))
+            err += add_term
+    
+    err = err/m
+    return err
+ 
+def get_gradients(x, w, y_true, b):
+    
+    grad_w = np.zeros(w.shape[0])
+    grad_b = 0
+    
+    m = x.shape[0]
+    for ix in range(m):
+        grad_w += (hypothesis(x[ix], w, b) - y_true[ix])*(x[ix])
+        grad_b += (hypothesis(x[ix], w, b) - y_true[ix])*(1)
+    
+    return [grad_w, grad_b]
+ def optimizer(x, w, y_true, b, learning_rate=0.001):
+    error = get_error(x, w, y_true, b)
+    
+    [grad_w, grad_b] = get_gradients(x, w, y_true, b)
+    
+    b = b - learning_rate*grad_b
+    w = w - learning_rate*grad_w
+    
+    return error, w, b
+def Logistic_Regression(X_train, Y_train, nb_epochs=200, learning_rate=0.0001):
+    
+    loss = []
+    
+    ## Parameter Initialisation
+    W = np.array([0.3, 0.2])
+    b = 3.6
+    
+    for ix in range(nb_epochs):
+        error, W, b = optimizer(X_train, W, Y_train, b, learning_rate)
+        loss.append(error)
+        
+    W_final = W
+    b_final = b
+    
+    return loss, W_final, b_final
+loss_logs, W_final, b_final = Logistic_Regression(X_train, Y_train)
+
+plt.plot(loss_logs)
+plt.show()
+
+print (W_final)
+print (b_final)
+print(X_test[0])
+
+def get_predict(test_point, W_final, b_final):
+    pred = hypothesis(test_point, W_final, b_final)
+    if pred >= 0.5:
+        return 1
+    else:
+        return 0
+ 
+print(get_predict(X_test[4], W_final, b_final))
+def get_accuracy(X_test, Y_test, W_final, b_final ):
+    m=X_test.shape[0]
+    preds = []
+    for i in range(m):
+        predictions = get_predict(X_test[i], W_final, b_final)
+        preds.append(predictions)
+            
+    return np.sum(np.array(preds)==Y_test)/X_test.shape[0]
+    
+print(get_accuracy(X_test, Y_test, W_final, b_final ))
+
+def get_test_loss(X_test, Y_test):
+    er = get_error(X_test, W_final,Y_test,b_final)
+    return er
+    
+print(get_test_loss(X_test, Y_test))
